@@ -1,0 +1,4 @@
+percona_repo:
+  - "deb [arch=amd64] http://repo.percona.com/apt {{ ansible_distribution_release }} main"
+  - "deb-src [arch=amd64 ]http://repo.percona.com/apt {{ ansible_distribution_release }} main"
+

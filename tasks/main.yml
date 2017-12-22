@@ -1,0 +1,84 @@
+---
+
+- name: Add Percona Repository for Debian
+  apt:
+    deb: "https://repo.percona.com/apt/percona-release_0.1-4.{{ ansible_distribution_release }}_all.deb"
+    state: present
+  when: ansible_os_family|lower == "debian"
+
+
+- name: Add Percona Repository for CentOS / RHEL
+  yum:
+    name: "http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm"
+    state: present
+  when: ansible_os_family|lower == "redhat"
+
+
+- name: Install Python Packages for Debian
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python-pycurl
+    - python-mysqldb
+  when: ansible_os_family|lower == "debian"
+
+
+- name: Install MySQL Percona Server and Client for Debian
+  apt:
+    state: latest
+    name: "{{ item }}"
+  with_items:
+    - "percona-server-server-{{ percona_version }}"
+    - "percona-server-client-{{ percona_version }}"
+  when: ansible_os_family|lower == "debian"
+  ignore_errors: true
+
+
+- name: Install MySQL Percona Server and Client for RHEL
+  yum:
+    state: latest
+    name: "{{ item }}"
+  with_items:
+    - "percona-server-server-{{ percona_version }}"
+    - "percona-server-client-{{ percona_version }}"
+  when: ansible_os_family|lower == "redhat"
+  ignore_errors: true
+
+
+- name: Set MySQL server-id as last IP octet
+  set_fact: db_server_id="{{ ansible_default_ipv4.address.split('.')[3] }}"
+
+
+- name: Deploy MySQL Configuration File
+  template:
+    src: my.cnf.j2
+    dest: /etc/mysql/my.cnf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Restart MySQL to Apply New Config
+  service:
+    name: mysql
+    state: restarted
+
+
+- name: Set Password for Native ROOT User
+  mysql_user:
+    name: root
+    host: localhost
+    password: "{{ root_password }}"
+    state: present
+  ignore_errors: true
+
+
+- name: Deploy .my.cnf File in /root Directory
+  template:
+    src: .my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+
